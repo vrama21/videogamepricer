@@ -1,12 +1,15 @@
+import asyncio
 import locale
+import ssl
 
+import aiohttp
 import regex
-import requests
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from pandas import DataFrame, to_numeric
 
 locale.setlocale(locale.LC_ALL, '')
+loop = asyncio.get_event_loop()
 
 pricecharting_url = 'https://www.pricecharting.com/game'
 
@@ -65,23 +68,41 @@ def getPriceFromDiv(element: Tag) -> float:
     if div_price == 'N/A':
         return
 
-    value = locale.atof(div_price[1:])
+    value = locale.atof(div_price)
     return value
 
 
-game_data = []
+async def fetch(session, url):
+    async with session.get(url, ssl=ssl.SSLContext()) as response:
+        return await response.text()
+
+
+async def fetch_all(urls, loop):
+    async with aiohttp.ClientSession(loop=loop) as session:
+        results = await asyncio.gather(
+            *[fetch(session, url) for url in urls], return_exceptions=True
+        )
+        return results
+
+
+urls = []
 for game in games:
     game_system = formatForUrl(game['system'])
     game_name = formatForUrl(game['name'])
 
     request_url = f'{pricecharting_url}/{game_system}/{game_name}'
+    urls.append(request_url)
 
-    response = requests.get(url=request_url)
+html_responses = loop.run_until_complete(fetch_all(urls, loop))
 
-    soup = BeautifulSoup(response.content, 'html.parser')
+game_data = []
+
+for html_response in html_responses:
+    soup = BeautifulSoup(html_response, 'html.parser')
     price_data_table: Tag = soup.find('table', id='price_data')
 
     try:
+        game_name_div: Tag = soup.find('h1', id='product_name')
         loose_price_div: Tag = price_data_table.find('td', id='used_price')
         complete_price_div: Tag = price_data_table.find('td', id='complete_price')
         new_price_div: Tag = price_data_table.find('td', id='new_price')
@@ -92,6 +113,10 @@ for game in games:
         print(f'Could not find {game["name"]}')
         break
 
+    game_info = [info.strip() for info in game_name_div.text.split('\n') if info]
+
+    game_name = game_info[0]
+    game_system = game_info[1]
     loose_price = getPriceFromDiv(loose_price_div)
     complete_price = getPriceFromDiv(complete_price_div)
     new_price = getPriceFromDiv(new_price_div)
@@ -101,7 +126,8 @@ for game in games:
 
     game_data.append(
         [
-            game.get('formatted_name') or game['name'],
+            game_name,
+            game_system,
             loose_price,
             complete_price,
             new_price,
@@ -116,6 +142,7 @@ df = DataFrame(
     data=game_data,
     columns=[
         'Game',
+        'System',
         'Loose',
         'Complete',
         'New',
@@ -125,4 +152,5 @@ df = DataFrame(
     ],
 )
 df.loc["Total"] = to_numeric(df.sum(numeric_only=True, axis=0))
+
 print(df)
