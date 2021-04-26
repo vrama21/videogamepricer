@@ -1,7 +1,12 @@
+import locale
+
+import regex
 import requests
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from pandas import DataFrame
+from pandas import DataFrame, to_numeric
+
+locale.setlocale(locale.LC_ALL, '')
 
 pricecharting_url = 'https://www.pricecharting.com/game'
 
@@ -53,10 +58,15 @@ def formatForUrl(data: str):
     return '-'.join(data.lower().split())
 
 
-def getPriceFromDiv(element: Tag) -> str:
-    value: str = element.find('span', class_='price js-price').text
+def getPriceFromDiv(element: Tag) -> float:
+    div_price: str = element.find('span', class_='price js-price').text.strip()
+    div_price = regex.sub(r'[,$\s]+', '', div_price)
 
-    return value.strip()
+    if div_price == 'N/A':
+        return
+
+    value = locale.atof(div_price[1:])
+    return value
 
 
 game_data = []
@@ -114,4 +124,5 @@ df = DataFrame(
         'Manual Only',
     ],
 )
+df.loc["Total"] = to_numeric(df.sum(numeric_only=True, axis=0))
 print(df)
