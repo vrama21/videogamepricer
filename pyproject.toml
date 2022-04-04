@@ -1,14 +1,19 @@
 [tool.poetry]
-authors = ["Valon Rama <valon.rama@creditgenie.com>"]
+authors = ["Valon Rama <vrama21@gmail.com>"]
 description = ""
 name = "videogamepricer"
 version = "0.1.0"
 
+[tool.poetry.scripts]
+videogamepricer = "videogamepricer.main:main"
+
 [tool.poetry.dependencies]
 pandas = "^1.2.4"
-python = "^3.8"
+python = "^3.10"
 beautifulsoup4 = "^4.9.3"
 aiohttp = {extras = ["speedups"], version = "^3.7.4"}
+regex = "^2022.3.15"
+numpy = "^1.22.3"
 
 [tool.poetry.dev-dependencies]
 black = "^21.4b0"
