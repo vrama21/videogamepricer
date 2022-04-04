@@ -1,15 +1,15 @@
 import asyncio
 import ssl
-from pathlib import Path
+from typing import List
 
 import aiohttp
 from pandas import DataFrame, read_csv, to_numeric
-from typing import List
-from videogamepricer.game import Game, GameProps
 
+from videogamepricer.game import Game
 
 # csv_path = Path(__file__).parent.resolve() / 'data' / 'sega_genesis.csv'
 # games = read_csv(csv_path).iloc[:, 0].tolist()
+
 
 async def fetch(game: Game, session: aiohttp.ClientSession):
     async with session.get(game.url, ssl=ssl.SSLContext()) as response:
@@ -19,7 +19,7 @@ async def fetch(game: Game, session: aiohttp.ClientSession):
 
         game.get_data(html_response)
 
-        return game.__dict__
+        return game
 
 
 async def fetch_all(games: List[Game], loop: asyncio.AbstractEventLoop):
@@ -32,7 +32,7 @@ async def fetch_all(games: List[Game], loop: asyncio.AbstractEventLoop):
 
 
 def main():
-    game_list: List[GameProps] = [
+    game_list = [
         {'name': 'Pokemon Red', 'system': 'Gameboy'},
         {'name': 'Pokemon Blue', 'system': 'Gameboy'},
         {'name': 'Pokemon Yellow', 'system': 'Gameboy'},
@@ -59,11 +59,11 @@ def main():
 
     games = [Game(game) for game in game_list]
     games = loop.run_until_complete(fetch_all(games, loop))
+    game_data = [game.__dict__ for game in games]
     
-    print(games)
-
-    df = DataFrame.from_records(data=games)
+    df = DataFrame.from_records(data=game_data)
     # df.loc["Total"] = to_numeric(df.sum(numeric_only=True, axis=0))
 
-    print(df)
-    df.to_csv('data/videogamepricer.csv', index=False)
+    csv_path = 'data/videogamepricer.csv'
+    print(f'Saving to {csv_path} ...')
+    df.to_csv(csv_path, index=False)

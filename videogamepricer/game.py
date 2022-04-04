@@ -1,22 +1,15 @@
-import asyncio
-from typing import NamedTuple, List
+import locale
+from typing import List
+
+import regex
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-import aiohttp
-import ssl
-import regex
-import locale
 
 locale.setlocale(locale.LC_ALL, '')
 
 
-class GameProps(dict):
-    name: str
-    system: str
-
-
 class Game:
-    def __init__(self, game: GameProps):
+    def __init__(self, game):
         self.name = game['name']
         self.system = game['system']
 
