@@ -1,5 +1,8 @@
 import asyncio
+import pprint
 import ssl
+import sys
+from pathlib import Path
 from typing import List
 
 import aiohttp
@@ -7,8 +10,7 @@ from pandas import DataFrame, read_csv, to_numeric
 
 from videogamepricer.game import Game
 
-# csv_path = Path(__file__).parent.resolve() / 'data' / 'sega_genesis.csv'
-# games = read_csv(csv_path).iloc[:, 0].tolist()
+pp = pprint.PrettyPrinter(indent=4)
 
 
 async def fetch(game: Game, session: aiohttp.ClientSession):
@@ -32,35 +34,23 @@ async def fetch_all(games: List[Game], loop: asyncio.AbstractEventLoop):
 
 
 def main():
-    game_list = [
-        {'name': 'Pokemon Red', 'system': 'Gameboy'},
-        {'name': 'Pokemon Blue', 'system': 'Gameboy'},
-        {'name': 'Pokemon Yellow', 'system': 'Gameboy'},
-        {'name': 'Pokemon Gold', 'system': 'Gameboy Color'},
-        {'name': 'Pokemon Silver', 'system': 'Gameboy Color'},
-        {'name': 'Pokemon Crystal', 'system': 'Gameboy Color'},
-        {'name': 'Pokemon Ruby', 'system': 'Gameboy Advance'},
-        {'name': 'Pokemon Sapphire', 'system': 'Gameboy Advance'},
-        {'name': 'Pokemon Emerald', 'system': 'Gameboy Advance'},
-        {'name': 'Pokemon FireRed', 'system': 'Gameboy Advance'},
-        {'name': 'Pokemon LeafGreen Version', 'system': 'Gameboy Advance'},
-        {'name': 'Pokemon Diamond', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon Pearl', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon Platinum', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon HeartGold Version', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon SoulSilver Version', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon White', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon White Version 2', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon Black', 'system': 'Nintendo DS'},
-        {'name': 'Pokemon Black Version 2', 'system': 'Nintendo DS'},
-    ]
+    args = sys.argv[1:]
+
+    if len(args) == 0:
+        print('Missing argument: CSV file path')
+        return
+
+    csv_file_name = args[0]
+
+    csv_path = Path(__file__).parent.parent.resolve() / 'data' / csv_file_name
+    game_records = read_csv(csv_path).to_dict(orient='records')
 
     loop = asyncio.get_event_loop()
 
-    games = [Game(game) for game in game_list]
+    games = [Game(game) for game in game_records]
     games = loop.run_until_complete(fetch_all(games, loop))
     game_data = [game.__dict__ for game in games]
-    
+
     df = DataFrame.from_records(data=game_data)
     # df.loc["Total"] = to_numeric(df.sum(numeric_only=True, axis=0))
 
