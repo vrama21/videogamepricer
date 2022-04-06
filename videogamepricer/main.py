@@ -25,13 +25,13 @@ def main():
     args = sys.argv[1:]
 
     if len(args) == 0:
-        print('Missing argument: CSV file path')
+        print("Missing argument: CSV file path")
         return
 
     csv_file_name = args[0]
 
-    csv_path = Path(__file__).parent.parent.resolve() / 'data' / csv_file_name
-    game_records = read_csv(csv_path).to_dict(orient='records')
+    csv_path = Path(__file__).parent.parent.resolve() / "data" / csv_file_name
+    game_records = read_csv(csv_path).to_dict(orient="records")
 
     loop = asyncio.get_event_loop()
 
@@ -42,6 +42,6 @@ def main():
     df = DataFrame.from_records(data=game_data)
     # df.loc["Total"] = to_numeric(df.sum(numeric_only=True, axis=0))
 
-    csv_path = 'data/videogamepricer.csv'
-    print(f'Saving to {csv_path} ...')
+    csv_path = "data/videogamepricer.csv"
+    print(f"Saving to {csv_path} ...")
     df.to_csv(csv_path, index=False)

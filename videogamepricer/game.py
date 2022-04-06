@@ -1,4 +1,3 @@
-from curses import is_term_resized
 import locale
 import pprint
 import ssl
@@ -66,28 +65,28 @@ class Game:
 
         return self
 
-    def get_game_url(self, html_response):
+    def get_game_url(self, html_response: str) -> str:
         soup = BeautifulSoup(html_response, "html.parser")
         games_table: Tag = soup.find("table", id="games_table").find("tbody")
         game_rows: List[Tag] = games_table.find_all("tr")
 
         search_results = []
         for row in game_rows:
-            search_results.append(
-                {
-                    "system": row.find("td", class_="console").text.strip(),
-                    "title": row.find("td", class_="title").find("a").text.strip(),
-                    "url": row.find("a", href=True)["href"],
-                }
-            )
+            search_result = {
+                "system": row.find("td", class_="console").text.strip(),
+                "title": row.find("td", class_="title").find("a").text.strip(),
+                "url": row.find("a", href=True)["href"],
+            }
+            search_results.append(search_result)
 
-        results_for_console = [result for result in search_results if result["system"] == self.system]
-        search_titles = [result["title"] for result in results_for_console]
-        close_matches = get_close_matches(self.name, search_titles, n=1)
+        search_results_by_console = [result for result in search_results if result["system"] == self.system]
+        search_results_titles = [result["title"] for result in search_results_by_console]
 
-        if len(close_matches) > 0:
+        close_title_matches = get_close_matches(self.name, search_results_titles, n=1)
+
+        if len(close_title_matches) > 0:
             best_match = next(
-                (item for item in results_for_console if item["title"] == close_matches[0]),
+                (item for item in search_results_by_console if item["title"] == close_title_matches[0]),
                 None,
             )
 
@@ -112,7 +111,7 @@ class Game:
 
         return value
 
-    def parse_and_set_data(self, html_response):
+    def parse_and_set_data(self, html_response: str) -> None:
         soup = BeautifulSoup(html_response, "html.parser")
 
         product_div = soup.find("h1", id="product_name")
