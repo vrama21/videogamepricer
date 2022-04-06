@@ -15,12 +15,12 @@ pp = pprint.PrettyPrinter(indent=2)
 
 class Game:
     def __init__(self, game):
-        self.name = game["name"]
-        self.system = game["system"]
+        self.name: str = game["name"]
+        self.system: str = game["system"]
 
-        self.title = None
-        self.box = game["box"] == "Yes"
-        self.manual = game["manual"] == "Yes"
+        self.title: str | None = None
+        self.box: bool = True if game.get("box", False) == 'Yes' else False
+        self.manual: bool = True if game.get("manual", False) == 'Yes' else False
 
         self.loose_price = None
         self.complete_price = None
@@ -29,12 +29,21 @@ class Game:
         self.box_only_price = None
         self.manual_only_price = None
 
-        self.estimated_value = 0
-
-        self.url = None
+    def __dict__(self) -> dict:
+        return {
+            "name": self.name,
+            "system": self.system,
+            "loose_price": self.loose_price,
+            "complete_price": self.complete_price,
+            "new_price": self.new_price,
+            "graded_price": self.graded_price,
+            "box_only_price": self.box_only_price,
+            "manual_only_price": self.manual_only_price,
+            "estimated_value": self.get_estimated_value(),
+        }
 
     def __repr__(self) -> str:
-        return str(self.__dict__)
+        return str(self.__dict__())
 
     async def fetch_data(self, session: aiohttp.ClientSession):
         pricecharting_search_url = "https://www.pricecharting.com/search-products?"
@@ -58,12 +67,13 @@ class Game:
             else:
                 game_url = self.get_game_url(search_response_html)
 
-                async with session.get(game_url, ssl=ssl.SSLContext()) as response:
-                    html_response = await response.text()
+                if game_url:
+                    async with session.get(game_url, ssl=ssl.SSLContext()) as response:
+                        html_response = await response.text()
 
-                    self.parse_and_set_data(html_response)
+                        self.parse_and_set_data(html_response)
 
-        return self
+        return self.__dict__()
 
     def get_game_url(self, html_response: str) -> str:
         soup = BeautifulSoup(html_response, "html.parser")
@@ -84,15 +94,14 @@ class Game:
 
         close_title_matches = get_close_matches(self.name, search_results_titles, n=1)
 
-        if len(close_title_matches) > 0:
-            best_match = next(
-                (item for item in search_results_by_console if item["title"] == close_title_matches[0]),
-                None,
-            )
+        best_match_title = close_title_matches[0] if len(close_title_matches) > 0 else search_results_titles[0]
 
-            self.url = best_match["url"]
+        best_match = next(
+            (item for item in search_results_by_console if item["title"] == best_match_title),
+            None,
+        )
 
-        return self.url
+        return best_match["url"]
 
     def get_price_by_id(self, price_data_table: Tag, id: str) -> float:
         if not price_data_table:
@@ -128,14 +137,16 @@ class Game:
             "manual_only_price",
         )
 
-        if self.estimated_value > 0:
-            return self.estimated_value
+    def get_estimated_value(self) -> float:
+        estimated_value = 0
 
         if not self.loose_price == "N/A":
-            self.estimated_value += self.loose_price
+            estimated_value += self.loose_price
 
         if self.box:
-            self.estimated_value += self.box_only_price
+            estimated_value += self.box_only_price
 
         if self.manual:
-            self.estimated_value += self.manual_only_price
+            estimated_value += self.manual_only_price
+
+        return estimated_value
