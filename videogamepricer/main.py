@@ -1,6 +1,5 @@
 import asyncio
 import pprint
-import ssl
 import sys
 from pathlib import Path
 from typing import List
@@ -13,22 +12,11 @@ from videogamepricer.game import Game
 pp = pprint.PrettyPrinter(indent=4)
 
 
-async def fetch(game: Game, session: aiohttp.ClientSession):
-    async with session.get(game.url, ssl=ssl.SSLContext()) as response:
-        print(f'Fetching {game.url} ...')
-
-        html_response = await response.text()
-
-        game.get_data(html_response)
-
-        return game
-
-
 async def fetch_all(games: List[Game], loop: asyncio.AbstractEventLoop):
     async with aiohttp.ClientSession(loop=loop) as session:
-        fetches = [fetch(game, session) for game in games]
+        fetches = [game.fetch_data(session) for game in games]
 
-        game_list = await asyncio.gather(*fetches, return_exceptions=True)
+        game_list = await asyncio.gather(*fetches)
 
         return game_list
 
